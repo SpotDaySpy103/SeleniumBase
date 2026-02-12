@@ -1,0 +1,319 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mock Table</title>
+    <style>
+        :root {
+            --bg: #f6f7fb;
+            --header-bg: #eef1f7;
+            --text: #1f2933;
+            --muted: #6b7280;
+            --accent: #1f6feb;
+            --accent-2: #8b5cf6;
+            --border: #e5e7eb;
+            --row-hover: #f1f5f9;
+            --badge-blue: #2563eb;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 24px;
+            font-family: "Segoe UI", Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .table-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1100px;
+        }
+
+        thead {
+            background: var(--header-bg);
+        }
+
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        th {
+            font-weight: 600;
+            color: #4b5563;
+        }
+
+        tbody tr {
+            background: #fff;
+        }
+
+        tbody tr:nth-child(even) {
+            background: #fbfcff;
+        }
+
+        tbody tr:hover {
+            background: var(--row-hover);
+        }
+
+        .route-link {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .route-link:hover {
+            text-decoration: underline;
+        }
+
+        .chip {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 999px;
+            background: #eef2ff;
+            color: #4338ca;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .price {
+            color: var(--badge-blue);
+            font-weight: 600;
+        }
+
+        .status {
+            color: #6366f1;
+            font-weight: 700;
+        }
+
+        .region {
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .km, .minutes {
+            color: #374151;
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        .nowrap {
+            white-space: nowrap;
+        }
+
+        .header-title {
+            padding: 12px 16px;
+            font-size: 16px;
+            font-weight: 700;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(90deg, rgba(31,111,235,0.08), rgba(139,92,246,0.08));
+            color: #1f2937;
+        }
+    </style>
+</head>
+<body>
+    <div class="table-card">
+        <div class="header-title">ตารางงานแข่งขันรับงาน (ตัวอย่าง)</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:40px;"></th>
+                    <th>เส้นทางเดินรถ</th>
+                    <th>เจ้าของสินค้า</th>
+                    <th class="region">ภูมิภาค</th>
+                    <th>ชนิดของรถ</th>
+                    <th>เวลาคาดว่าจะถึง</th>
+                    <th class="km">ระยะทางรวม (KM)</th>
+                    <th>รายการบริการ</th>
+                    <th>ค่าเที่ยว (THB)</th>
+                    <th>ข้อกำหนดการขนส่ง</th>
+                    <th>เวลาสิ้นสุดการแข่งขันรับงาน</th>
+                    <th class="minutes">เหลือเวลาสิ้นสุดการแข่งขันรับงาน</th>
+                    <th>ดำเนินการ</th>
+                </tr>
+            </thead>
+            <div class="el-table__body-wrapper">
+                <table>
+                    <tbody>
+                    <tr>
+                        <td class="el-table_1_column_1">›</td>
+                        <td class="el-table_1_column_2"><a class="route-link" href="#">SO2-SGP</a></td>
+                        <td class="el-table_1_column_3">Flash Express</td>
+                        <td class="region el-table_1_column_4">S</td>
+                        <td class="el-table_1_column_5">4W</td>
+                        <td class="nowrap el-table_1_column_6">26-12-2025 17:00</td>
+                        <td class="km el-table_1_column_7">245</td>
+                        <td class="muted el-table_1_column_8"></td>
+                        <td class="price el-table_1_column_9">3450.00</td>
+                        <td class="muted el-table_1_column_10"></td>
+                        <td class="nowrap el-table_1_column_11">26-12-2025 16:50</td>
+                        <td class="minutes el-table_1_column_12">1h 49m</td>
+                        <td class="status el-table_1_column_13">แข่งขันรับงาน</td>
+                    </tr>
+                    <tr>
+                        <td class="el-table_1_column_1">›</td>
+                        <td class="el-table_1_column_2"><a class="route-link" href="#">STO2-2BYA</a></td>
+                        <td class="el-table_1_column_3">Flash Express</td>
+                        <td class="region el-table_1_column_4">S</td>
+                        <td class="el-table_1_column_5">4WJ</td>
+                        <td class="nowrap el-table_1_column_6">26-12-2025 17:00</td>
+                        <td class="km el-table_1_column_7">50</td>
+                        <td class="muted el-table_1_column_8"></td>
+                        <td class="price el-table_1_column_9">1370.00</td>
+                        <td class="muted el-table_1_column_10"></td>
+                        <td class="nowrap el-table_1_column_11">26-12-2025 16:50</td>
+                        <td class="minutes el-table_1_column_12">1h 49m</td>
+                        <td class="status el-table_1_column_13">แข่งขันรับงาน</td>
+                    </tr>
+                    <tr>
+                        <td class="el-table_1_column_1">›</td>
+                        <td class="el-table_1_column_2"><a class="route-link" href="#">SO4-YLL</a></td>
+                        <td class="el-table_1_column_3">Flash Express</td>
+                        <td class="region el-table_1_column_4">S</td>
+                        <td class="el-table_1_column_5">4W</td>
+                        <td class="nowrap el-table_1_column_6">26-12-2025 17:00</td>
+                        <td class="km el-table_1_column_7">121</td>
+                        <td class="muted el-table_1_column_8"></td>
+                        <td class="price el-table_1_column_9">1340.00</td>
+                        <td class="muted el-table_1_column_10"></td>
+                        <td class="nowrap el-table_1_column_11">26-12-2025 16:50</td>
+                        <td class="minutes el-table_1_column_12">1h 49m</td>
+                        <td class="status el-table_1_column_13">แข่งขันรับงาน</td>
+                    </tr>
+                    <tr>
+                        <td class="el-table_1_column_1">›</td>
+                        <td class="el-table_1_column_2"><a class="route-link" href="#">BURT-YLA-7STK</a></td>
+                        <td class="el-table_1_column_3">Flash Express</td>
+                        <td class="region el-table_1_column_4">S</td>
+                        <td class="el-table_1_column_5">4WJ</td>
+                        <td class="nowrap el-table_1_column_6">26-12-2025 17:00</td>
+                        <td class="km el-table_1_column_7">140</td>
+                        <td class="muted el-table_1_column_8"></td>
+                        <td class="price el-table_1_column_9">2530.00</td>
+                        <td class="muted el-table_1_column_10"></td>
+                        <td class="nowrap el-table_1_column_11">26-12-2025 16:50</td>
+                        <td class="minutes el-table_1_column_12">1h 49m</td>
+                        <td class="status el-table_1_column_13">แข่งขันรับงาน</td>
+                    </tr>
+                    <tr>
+                        <td class="el-table_1_column_1">›</td>
+                        <td class="el-table_1_column_2"><a class="route-link" href="#">BURT-AYUU</a></td>
+                        <td class="el-table_1_column_3">Flash Express</td>
+                        <td class="region el-table_1_column_4">C</td>
+                        <td class="el-table_1_column_5">4W</td>
+                        <td class="nowrap el-table_1_column_6">26-12-2025 16:30</td>
+                        <td class="km el-table_1_column_7">63</td>
+                        <td class="muted el-table_1_column_8"></td>
+                        <td class="price el-table_1_column_9">1510.00</td>
+                        <td class="muted el-table_1_column_10"></td>
+                        <td class="nowrap el-table_1_column_11">26-12-2025 16:20</td>
+                        <td class="minutes el-table_1_column_12">1h 49m</td>
+                        <td class="status el-table_1_column_13">แข่งขันรับงาน</td>
+                    </tr>
+                    <tr>
+                        <td class="el-table_1_column_1">›</td>
+                        <td class="el-table_1_column_2"><a class="route-link" href="#">SO2-7LAT</a></td>
+                        <td class="el-table_1_column_3">Flash Express</td>
+                        <td class="region el-table_1_column_4">S</td>
+                        <td class="el-table_1_column_5">4WJ</td>
+                        <td class="nowrap el-table_1_column_6">26-12-2025 17:00</td>
+                        <td class="km el-table_1_column_7">121</td>
+                        <td class="muted el-table_1_column_8"></td>
+                        <td class="price el-table_1_column_9">1340.00</td>
+                        <td class="muted el-table_1_column_10"></td>
+                        <td class="nowrap el-table_1_column_11">26-12-2025 16:50</td>
+                        <td class="minutes el-table_1_column_12">1h 49m</td>
+                        <td class="status el-table_1_column_13">แข่งขันรับงาน</td>
+                    </tr>
+                    <tr>
+                        <td class="el-table_1_column_1">›</td>
+                        <td class="el-table_1_column_2"><a class="route-link" href="#">SO2-STO2-BET</a></td>
+                        <td class="el-table_1_column_3">Flash Express</td>
+                        <td class="region el-table_1_column_4">S</td>
+                        <td class="el-table_1_column_5">6W5.5</td>
+                        <td class="nowrap el-table_1_column_6">26-12-2025 17:00</td>
+                        <td class="km el-table_1_column_7">239</td>
+                        <td class="muted el-table_1_column_8"></td>
+                        <td class="price el-table_1_column_9">2500.00</td>
+                        <td class="muted el-table_1_column_10"></td>
+                        <td class="nowrap el-table_1_column_11">26-12-2025 16:50</td>
+                        <td class="minutes el-table_1_column_12">1h 49m</td>
+                        <td class="status el-table_1_column_13">แข่งขันรับงาน</td>
+                    </tr>
+                    <tr>
+                        <td class="el-table_1_column_1">›</td>
+                        <td class="el-table_1_column_2"><a class="route-link" href="#">BURT-SKNTO2</a></td>
+                        <td class="el-table_1_column_3">Flash Express</td>
+                        <td class="region el-table_1_column_4">S</td>
+                        <td class="el-table_1_column_5">6W7.2</td>
+                        <td class="nowrap el-table_1_column_6">26-12-2025 17:00</td>
+                        <td class="km el-table_1_column_7">17</td>
+                        <td class="muted el-table_1_column_8"></td>
+                        <td class="price el-table_1_column_9">1010.00</td>
+                        <td class="muted el-table_1_column_10"></td>
+                        <td class="nowrap el-table_1_column_11">26-12-2025 16:50</td>
+                        <td class="minutes el-table_1_column_12">1h 49m</td>
+                        <td class="status el-table_1_column_13">แข่งขันรับงาน</td>
+                    </tr>
+                    <tr>
+                        <td class="el-table_1_column_1">›</td>
+                        <td class="el-table_1_column_2"><a class="route-link" href="#">SO2-YHA</a></td>
+                        <td class="el-table_1_column_3">Flash Express</td>
+                        <td class="region el-table_1_column_4">S</td>
+                        <td class="el-table_1_column_5">4WJ</td>
+                        <td class="nowrap el-table_1_column_6">26-12-2025 17:00</td>
+                        <td class="km el-table_1_column_7">118</td>
+                        <td class="muted el-table_1_column_8"></td>
+                        <td class="price el-table_1_column_9">2110.00</td>
+                        <td class="muted el-table_1_column_10"></td>
+                        <td class="nowrap el-table_1_column_11">26-12-2025 16:50</td>
+                        <td class="minutes el-table_1_column_12">1h 49m</td>
+                        <td class="status el-table_1_column_13">แข่งขันรับงาน</td>
+                    </tr>
+                    <tr>
+                        <td class="el-table_1_column_1">›</td>
+                        <td class="el-table_1_column_2"><a class="route-link" href="#">ABCD-TBI</a></td>
+                        <td class="el-table_1_column_3">Flash Express</td>
+                        <td class="region el-table_1_column_4">S</td>
+                        <td class="el-table_1_column_5">6W7.2</td>
+                        <td class="nowrap el-table_1_column_6">26-12-2025 17:00</td>
+                        <td class="km el-table_1_column_7">244</td>
+                        <td class="muted el-table_1_column_8"></td>
+                        <td class="price el-table_1_column_9">2340.00</td>
+                        <td class="muted el-table_1_column_10"></td>
+                        <td class="nowrap el-table_1_column_11">26-12-2025 16:50</td>
+                        <td class="minutes el-table_1_column_12">1h 49m</td>
+                        <td class="status el-table_1_column_13">แข่งขันรับงาน</td>
+                    </tr>
+                    <div data-v-50b69d50="" style="text-align: center;">
+                                <button data-v-50b69d50="" type="button" class="el-button el-button--primary el-button--mini" style="width: 100%;">
+                                    <span>แข่งขันรับงาน</span>
+                                </button>
+                            </div>
+                    </tbody>
+                </table>
+                
+            </div>
+                
+        </table>
+    </div>
+</body>
+</html>
