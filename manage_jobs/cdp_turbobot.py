@@ -36,14 +36,42 @@ def turbo_manual_Task(job):
     """
     Receive job data from the Electron UI (Management page).
     job keys: id, region, vehicleType, startDestination
+    Returns result by printing a JSON line to stdout (read by Electron).
     """
-    print(f"[TurboManualTask] Received job #{job.get('id')}:")
-    print(f"  Region:           {job.get('region')}")
-    print(f"  Vehicle Type:     {job.get('vehicleType')}")
-    print(f"  Start Destination:{job.get('startDestination')}")
-    # TODO: Implement actual automation steps for the manual task
-    
+    global sb
+    jobID = job.get('id')
+    jobRegion = job.get('region')
+    jobVehicleType = job.get('vehicleType')
+    jobStartDestination = job.get('startDestination')
 
+    if sb is None:
+        send_result(jobID, "failed", "Browser not initialized. Login first.")
+        return
+
+    try:
+        # TODO: Implement actual automation steps here
+        # e.g. sb.click(...), sb.type(...), etc.
+        print(f"[TurboManualTask] Processing job #{jobID}: {jobRegion}, {jobVehicleType}, {jobStartDestination}", flush=True)
+        time.sleep(2)  # Simulated work — replace with real automation
+        
+        send_result(jobID, "completed", f"Processed job #{jobID} for region {jobRegion} with vehicle {jobVehicleType} starting at {jobStartDestination}")
+    except Exception as e:
+        send_result(jobID, "failed", str(e))
+
+
+def send_result(job_id, status, message=""):
+    """
+    Print a structured JSON result line to stdout.
+    Electron main process parses this to update the UI.
+    """
+    result = json.dumps({
+        "type": "task_result",
+        "id": job_id,
+        "status": status,
+        "message": message,
+    })
+    print(result, flush=True)
+    
 
 def listen_for_commands():
     """
