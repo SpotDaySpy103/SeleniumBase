@@ -41,4 +41,5 @@ folder = "downloaded_files"
 file_name = "copilot_results.html"
 sb.save_as_html(file_name, folder)
 print('"./%s/%s" was saved!' % (folder, file_name))
+sb.sleep(10)
 sb.driver.stop()
