@@ -17,7 +17,7 @@ def turbo_login(username, password):
         # Try to start the browser if not already started
         if sb is None:
             try:
-                sb = sb_cdp.Chrome(url, incognito=True)
+                sb = sb_cdp.Chrome(urlMock, incognito=True)
             except Exception as e:
                 print(f"Failed to start browser: {e}")
                 sb = None
@@ -25,13 +25,13 @@ def turbo_login(username, password):
         sb.maximize()
         sb.sleep(2)
         sb.solve_captcha()
-        accountID = 'input[placeholder="Account ID"]'
-        accountPW = 'input[placeholder="Password"]'
-        sb.type(accountID, username)
-        sb.type(accountPW, password)
-        sb.click('button:contains(" Login ")')
-        sb.sleep(2)
-        sb.click('label:contains("TH")')
+        # accountID = 'input[placeholder="Account ID"]'
+        # accountPW = 'input[placeholder="Password"]'
+        # sb.type(accountID, username)
+        # sb.type(accountPW, password)
+        # sb.click('button:contains(" Login ")')
+        # sb.sleep(2)
+        # sb.click('label:contains("TH")')
     except Exception as e:
         print(f"[TurboLogin] Login failed: {e}")
     
@@ -44,20 +44,22 @@ def turbo_manual_Task(job):
     jobID = job.get('id')
     jobRegion = job.get('region')
     jobVehicleType = job.get('vehicleType')
-    jobDest = job.get('startDestination')
+    jobDestOne = job.get('startDestination')
+    jobDestTwo = job.get('secondDestination')
+    jobDestThree = job.get('thirdDestination')
+    jobTimeout = job.get('timeout', 10)  # Default timeout in minutes if not provided
 
     if sb is None:
         send_result(jobID, "failed", "Browser not initialized. Login first.")
         return
 
     try:
-        # TODO: Implement actual automation steps here
-        print(f"[TurboManualTask] Processing job #{jobID}: {jobRegion}, {jobVehicleType}, {jobDest}", flush=True)
+        print(f"[TurboManualTask] Processing job #{jobID}: {jobRegion}, {jobVehicleType}, {jobDestOne}, {jobDestTwo}, {jobDestThree}", flush=True)
         time.sleep(2)
         match_found = False
 
 		# Set timeout for search rows
-        search_timeout = 60  # seconds
+        search_timeout = jobTimeout * 60  # convert seconds to minutes
         search_start_time = time.time()
         
         tables_result = turbo_get_tables()
@@ -70,39 +72,17 @@ def turbo_manual_Task(job):
                 dest_text = elem.text.strip()
                 parts = dest_text.split('-') # Split '-' to get the first part as destination
                 destOneCus = parts[0] if len(parts) > 0 else '' # Get the first part as destination
+                destTwoCus = parts[1] if len(parts) > 1 else '' # Get the second part as destination
+                destThreeCus = parts[2] if len(parts) > 2 else '' # Get the third part as destination
                 region_text = elementsRegion[i].text.strip() if i < len(elementsRegion) else "N/A"
                 vehicle_text = elementsVehicle[i].text.strip() if i < len(elementsVehicle) else "N/A"
                 select_text = elementsSelect[i].text.strip() if i < len(elementsSelect) else "N/A"
                 print(f"Row {i}: Dest='{dest_text}', Region='{region_text}', Vehicle='{vehicle_text}', Select='{select_text}'", flush=True)
                 
-                # Random destination matches any row, so we can ignore destination when matching if jobDest is "Random"
-                if jobDest == "Random":
-                    if vehicle_text == jobVehicleType and region_text == jobRegion:
-                        print(f"--> Match found for job #{jobID} at row {i} with random destination (vehicle_text='{vehicle_text}' = jobVehicleType='{jobVehicleType}' AND region_text='{region_text}' = jobRegion='{jobRegion}')", flush=True)
-                        match_found = True
-                        sb.sleep(0.5)
-                        # Click the select button in this row
-                        if i < len(elementsSelect):
-                            try:
-                                elementsSelect[i].mouse_click()
-                                sb.sleep(3) 
-                                print(f"Clicked select for job #{jobID} at row {i}", flush=True)
-                                sb.sleep(3)
-                                sb.wait_for_element('button[data-v-50b69d50] span:contains("แข่งขันรับงาน")', timeout=15)
-                                sb.sleep(0.8)
-                                sb.highlight_overlay('button[data-v-50b69d50] span:contains("แข่งขันรับงาน")')
-                                sb.sleep(1)
-                                send_result(jobID, "completed", f"{dest_text}")
-                            except Exception as e:
-                                print(f"Failed to click select for job #{jobID} at row {i}: {e}", flush=True)
-                                send_result(jobID, "failed", f"{dest_text}")
-                        else:
-                            print(f"No select element for row {i} while processing job #{jobID}", flush=True)
-                        break
-                if destOneCus == jobDest:
+                if destOneCus == jobDestOne and destTwoCus == jobDestTwo and destThreeCus == jobDestThree:
                     if vehicle_text == jobVehicleType:
                         if region_text == jobRegion:
-                            print(f"--> Match found for job #{jobID} at row {i} with exact destination (destOneCus='{destOneCus}' = jobDest='{jobDest}' AND vehicle_text='{vehicle_text}' = jobVehicleType='{jobVehicleType}' AND region_text='{region_text}' = jobRegion='{jobRegion}')", flush=True)
+                            print(f"--> Match found for job #{jobID} at row {i} with exact destination: {destOneCus}-{destTwoCus}-{destThreeCus} AND vehicle: {vehicle_text} AND region: {region_text}", flush=True)
                             match_found = True
                             sb.sleep(0.5)
                             # Click the select button in this row
@@ -113,10 +93,12 @@ def turbo_manual_Task(job):
                                     sb.sleep(3)
                                     sb.wait_for_element('button[data-v-50b69d50] span:contains("แข่งขันรับงาน")', timeout=15)
                                     sb.sleep(5)
-                                    sb.highlight_overlay('button[data-v-50b69d50] span:contains("แข่งขันรับงาน")')
+                                    sb.mouse_click('button[data-v-50b69d50] span:contains("แข่งขันรับงาน")')
+                                    # sb.highlight_overlay('button[data-v-50b69d50] span:contains("แข่งขันรับงาน")')
                                     #app > div > div.main-container > div.app-main > div > div:nth-child(4) > div > div.el-dialog__footer > div > button[data-v-50b69d50] span:contains("แข่งขันรับงาน")
                                     # highlight this Xpath //*[@id="app"]/div/div[2]/div[2]/div/div[3]/div/div[3]/div/button/span
                                     send_result(jobID, "completed", f"{dest_text}")
+                                    sb.sleep(2)
                                 except Exception as e:
                                     print(f"Failed to click select for job #{jobID} at row {i}: {e}", flush=True)
                                     send_result(jobID, "failed", f"{dest_text}")
@@ -128,13 +110,13 @@ def turbo_manual_Task(job):
                 elapsed = time.time() - search_start_time
                 remaining = search_timeout - elapsed
                 if remaining > 0:
-                    print(f"No match found. Waiting 2 seconds before refetching... ({remaining:.1f}s remaining)", flush=True)
-                    time.sleep(2)
+                    print(f"No match found. Waiting 3 seconds before refetching... ({remaining:.1f}s remaining)", flush=True)
+                    time.sleep(3)
                     
         # After timeout
         if not match_found:
             print(f"✗ No match found after {search_timeout} seconds timeout", flush=True)
-            send_result(jobID, "failed", f"No match found after {search_timeout} seconds timeout")
+            send_result(jobID, "failed", f"No match found after {search_timeout/60} minutes timeout")
     except Exception as e:
         send_result(jobID, "failed", str(e))
 
@@ -144,7 +126,7 @@ def turbo_get_tables():
         elementsDest = sb.find_elements('td[class*="el-table_1_column_2"]', timeout=30)
         elementsRegion = sb.find_elements('td[class*="el-table_1_column_4"]', timeout=30)
         elementsVehicle = sb.find_elements('td[class*="el-table_1_column_5"]', timeout=30)
-        elementsSelect = sb.find_elements('td[class*="el-table_1_column_13"] span', timeout=30) #'td[class*="el-table_1_column_13"] span'
+        elementsSelect = sb.find_elements('td[class*="el-table_1_column_13"]', timeout=30) #'td[class*="el-table_1_column_13"] span'
         return elementsDest, elementsRegion, elementsVehicle, elementsSelect
     except TimeoutException as e:
         fail_msg = f"FAIL: Timed out waiting for table columns: {e}"
