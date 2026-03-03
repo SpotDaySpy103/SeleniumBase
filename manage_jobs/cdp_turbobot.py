@@ -50,7 +50,7 @@ def turbo_manual_Task(job):
     jobTimeout = job.get('timeout', 10)  # Default timeout in minutes if not provided
 
     if sb is None:
-        send_result(jobID, "failed", "Browser not initialized. Login first.")
+        send_result(jobID, "failed", jobRegion, jobVehicleType, "Browser not initialized. Login first.")
         return
 
     try:
@@ -97,11 +97,11 @@ def turbo_manual_Task(job):
                                     # sb.highlight_overlay('button[data-v-50b69d50] span:contains("แข่งขันรับงาน")')
                                     #app > div > div.main-container > div.app-main > div > div:nth-child(4) > div > div.el-dialog__footer > div > button[data-v-50b69d50] span:contains("แข่งขันรับงาน")
                                     # highlight this Xpath //*[@id="app"]/div/div[2]/div[2]/div/div[3]/div/div[3]/div/button/span
-                                    send_result(jobID, "completed", f"{dest_text}")
+                                    send_result(jobID, "completed", jobRegion, jobVehicleType, f"{dest_text}")
                                     sb.sleep(2)
                                 except Exception as e:
                                     print(f"Failed to click select for job #{jobID} at row {i}: {e}", flush=True)
-                                    send_result(jobID, "failed", f"{dest_text}")
+                                    send_result(jobID, "failed", jobRegion, jobVehicleType, f"{dest_text}")
                             else:
                                 print(f"No select element for row {i} while processing job #{jobID}", flush=True)
                             break
@@ -116,9 +116,9 @@ def turbo_manual_Task(job):
         # After timeout
         if not match_found:
             print(f"✗ No match found after {search_timeout} seconds timeout", flush=True)
-            send_result(jobID, "failed", f"No match found after {search_timeout/60} minutes timeout")
+            send_result(jobID, "failed", jobRegion, jobVehicleType, f"No match found after {search_timeout/60} minutes timeout")
     except Exception as e:
-        send_result(jobID, "failed", str(e))
+        send_result(jobID, "failed", jobRegion, jobVehicleType, str(e))
 
 def turbo_get_tables():
     global sb
@@ -137,7 +137,7 @@ def turbo_get_tables():
         print(fail_msg, flush=True)
         return fail_msg, 500
 
-def send_result(job_id, status, message=""):
+def send_result(job_id, status, region="", vehicle="", message=""):
     """
     Print a structured JSON result line to stdout.
     Electron main process parses this to update the UI.
@@ -146,6 +146,8 @@ def send_result(job_id, status, message=""):
         "type": "task_result",
         "id": job_id,
         "status": status,
+        "region": region,
+        "vehicle": vehicle,
         "message": message,
     })
     print(result, flush=True)
