@@ -36,6 +36,215 @@ def turbo_login(username, password):
         print(f"[TurboLogin] Login failed: {e}")
     
 def turbo_manual_Task(job):
+    if isinstance(job, dict) and isinstance(job.get('jobs'), list):
+        jobs = job.get('jobs', [])
+    elif isinstance(job, list):
+        jobs = job
+    else:
+        jobs = [job]
+
+    jobs = [item for item in jobs if isinstance(item, dict)]
+    if not jobs:
+        print('[TurboManualTask] Invalid payload: no job data found', flush=True)
+        return
+
+    if len(jobs) > 5:
+        print(f"[TurboManualTask] Received {len(jobs)} jobs. Trimming to max 5.", flush=True)
+        jobs = jobs[:5]
+
+    if len(jobs) < 1:
+        print('[TurboManualTask] Received fewer than 1 job. Ignoring.', flush=True)
+        return
+
+    pause_after_click_seconds = 60
+    pause_minutes_setting = jobs[0].get('pauseAfterClickMinutes')
+    try:
+        parsed_pause_minutes = float(pause_minutes_setting)
+        if parsed_pause_minutes > 0:
+            pause_after_click_seconds = parsed_pause_minutes * 60
+    except (TypeError, ValueError):
+        pause_seconds_setting = jobs[0].get('pauseAfterClickSeconds')
+        try:
+            parsed_pause_seconds = float(pause_seconds_setting)
+            if parsed_pause_seconds > 0:
+                pause_after_click_seconds = parsed_pause_seconds
+        except (TypeError, ValueError):
+            pass
+
+    print(f"[TurboManualTask] Received {len(jobs)} job(s)", flush=True)
+
+    if sb is None:
+        for item in jobs:
+            send_result(
+                item.get('id'),
+                "failed",
+                item.get('region'),
+                item.get('vehicleType'),
+                "Browser not initialized. Login first.",
+            )
+        return
+
+    pending_jobs = []
+    now = time.time()
+    for item in jobs:
+        job_timeout = item.get('timeout', 10)
+        try:
+            timeout_minutes = float(job_timeout)
+        except (TypeError, ValueError):
+            timeout_minutes = 10
+        if timeout_minutes <= 0:
+            timeout_minutes = 10
+        print(f"[TurboManualTask] Job {item}", flush=True)
+        pending_jobs.append({
+            "id": item.get('id'),
+            "region": item.get('region'),
+            "vehicleType": item.get('vehicleType'),
+            "startDestination": item.get('startDestination'),
+            "secondDestination": item.get('secondDestination'),
+            "thirdDestination": item.get('thirdDestination'),
+            "timeout_seconds": timeout_minutes * 60,
+            "started_at": now,
+        })
+    
+    print(f"[TurboManualTask] All jobs in pending list: {pending_jobs}", flush=True)
+    print(f"[TurboManualTask] Added {len(pending_jobs)} job(s) to pending list with timeouts: {[item['timeout_seconds'] for item in pending_jobs]} seconds", flush=True)
+    pause_other_jobs_until = 0
+
+    while pending_jobs:
+        now_loop = time.time()
+        if pause_other_jobs_until > now_loop:
+            remaining_pause = pause_other_jobs_until - now_loop
+            print(
+                f"[TurboManualTask] One task already clicked. Pausing other tasks for {remaining_pause:.1f}s...",
+                flush=True,
+            )
+            time.sleep(remaining_pause)
+
+        tables_result = turbo_get_tables()
+        if not isinstance(tables_result, tuple):
+            fail_message = str(tables_result)
+            for job_item in pending_jobs:
+                send_result(
+                    job_item["id"],
+                    "failed",
+                    job_item["region"],
+                    job_item["vehicleType"],
+                    fail_message,
+                )
+            return
+
+        elementsDest, elementsRegion, elementsVehicle, elementsSelect = tables_result
+
+        matched_job_ids = set()
+
+        clicked_job_id = None
+
+        for i, elem in enumerate(elementsDest):
+            dest_text = elem.text.strip()
+            parts = [segment.strip() for segment in dest_text.split('-')]
+            dest_one_customer = parts[0] if len(parts) > 0 else ''
+            dest_two_customer = parts[1] if len(parts) > 1 else ''
+            dest_three_customer = parts[2] if len(parts) > 2 else ''
+
+            region_text = elementsRegion[i].text.strip() if i < len(elementsRegion) else "N/A"
+            vehicle_text = elementsVehicle[i].text.strip() if i < len(elementsVehicle) else "N/A"
+            select_text = elementsSelect[i].text.strip() if i < len(elementsSelect) else "N/A"
+            print(
+                f"Row {i}: Dest='{dest_text}', Region='{region_text}', Vehicle='{vehicle_text}', Select='{select_text}'",
+                flush=True,
+            )
+
+            for job_item in pending_jobs:
+                if job_item["id"] in matched_job_ids:
+                    continue
+
+                if (
+                    dest_one_customer == (job_item["startDestination"] or '')
+                    and dest_two_customer == (job_item["secondDestination"] or '')
+                    and dest_three_customer == (job_item["thirdDestination"] or '')
+                    and vehicle_text == (job_item["vehicleType"] or '')
+                    and region_text == (job_item["region"] or '')
+                ):
+                    print(
+                        f"--> Match found for job #{job_item['id']} at row {i} with exact destination: "
+                        f"{dest_one_customer}-{dest_two_customer}-{dest_three_customer} "
+                        f"AND vehicle: {vehicle_text} AND region: {region_text}",
+                        flush=True,
+                    )
+
+                    if i < len(elementsSelect):
+                        try:
+                            elementsSelect[i].mouse_click()
+                            clicked_job_id = job_item["id"]
+                            print(f"Clicked select for job #{job_item['id']} at row {i}", flush=True)
+                            sb.sleep(3)
+                            sb.wait_for_element('button[data-v-50b69d50] span:contains("แข่งขันรับงาน")', timeout=15)
+                            sb.sleep(5)
+                            sb.mouse_click('button[data-v-50b69d50] span:contains("แข่งขันรับงาน")')
+                            send_result(job_item["id"], "completed", job_item["region"], job_item["vehicleType"], f"{dest_text}")
+                        except Exception as e:
+                            print(f"Failed to click select for job #{job_item['id']} at row {i}: {e}", flush=True)
+                            send_result(job_item["id"], "failed", job_item["region"], job_item["vehicleType"], f"{dest_text}")
+                    else:
+                        print(f"No select element for row {i} while processing job #{job_item['id']}", flush=True)
+                        send_result(
+                            job_item["id"],
+                            "failed",
+                            job_item["region"],
+                            job_item["vehicleType"],
+                            "No selectable action for matched row",
+                        )
+
+                    matched_job_ids.add(job_item["id"])
+
+                    if clicked_job_id is not None:
+                        # Only allow one clicked task per loop so others are paused for 1 minute
+                        break
+
+            if clicked_job_id is not None:
+                break
+
+        if matched_job_ids:
+            pending_jobs = [item for item in pending_jobs if item["id"] not in matched_job_ids]
+
+        if clicked_job_id is not None and pending_jobs:
+            pause_other_jobs_until = time.time() + pause_after_click_seconds
+            print(
+                f"[TurboManualTask] Job #{clicked_job_id} clicked. Pausing remaining {len(pending_jobs)} task(s) for {pause_after_click_seconds / 60:.2f} minute(s).",
+                flush=True,
+            )
+            continue
+
+        current_time = time.time()
+        timed_out_job_ids = set()
+        for job_item in pending_jobs:
+            elapsed_seconds = current_time - job_item["started_at"]
+            if elapsed_seconds >= job_item["timeout_seconds"]:
+                print(
+                    f"✗ No match found for job #{job_item['id']} after {job_item['timeout_seconds']} seconds timeout",
+                    flush=True,
+                )
+                send_result(
+                    job_item["id"],
+                    "failed",
+                    job_item["region"],
+                    job_item["vehicleType"],
+                    f"No match found after {job_item['timeout_seconds'] / 60} minutes timeout",
+                )
+                timed_out_job_ids.add(job_item["id"])
+
+        if timed_out_job_ids:
+            pending_jobs = [item for item in pending_jobs if item["id"] not in timed_out_job_ids]
+
+        if pending_jobs:
+            print(
+                f"No match found yet for {len(pending_jobs)} job(s). Waiting 3 seconds before refetching...",
+                flush=True,
+            )
+            time.sleep(3)
+
+
+def turbo_manual_single_task(job):
     """
     Receive job data from the Electron UI (Management page).
     Returns result by printing a JSON line to stdout (read by Electron).
@@ -49,6 +258,13 @@ def turbo_manual_Task(job):
     jobDestThree = job.get('thirdDestination')
     jobTimeout = job.get('timeout', 10)  # Default timeout in minutes if not provided
 
+    try:
+        timeout_minutes = float(jobTimeout)
+    except (TypeError, ValueError):
+        timeout_minutes = 10
+    if timeout_minutes <= 0:
+        timeout_minutes = 10
+
     if sb is None:
         send_result(jobID, "failed", jobRegion, jobVehicleType, "Browser not initialized. Login first.")
         return
@@ -58,8 +274,8 @@ def turbo_manual_Task(job):
         time.sleep(2)
         match_found = False
 
-		# Set timeout for search rows
-        search_timeout = jobTimeout * 60  # convert seconds to minutes
+        # Set timeout for search rows
+        search_timeout = timeout_minutes * 60  # convert minutes to seconds
         search_start_time = time.time()
         
         tables_result = turbo_get_tables()
