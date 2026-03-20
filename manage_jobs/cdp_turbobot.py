@@ -10,14 +10,14 @@ url = "https://th.turboroute.ai/#/login?redirect=%2Fgrab-single%2Fsingle-hall"
 urlMock = "http://127.0.0.1:5500/SeleniumBase/manage_jobs/mockTable.html"
 sb = None
 
+
 def turbo_login(username, password):
     global sb
     print(f"[TurboLogin] Logging in as: {username, password}")
     try:
-        # Try to start the browser if not already started
         if sb is None:
             try:
-                sb = sb_cdp.Chrome(urlMock, incognito=True)
+                sb = sb_cdp.Chrome(url, incognito=True)
             except Exception as e:
                 print(f"Failed to start browser: {e}")
                 sb = None
@@ -25,16 +25,17 @@ def turbo_login(username, password):
         sb.maximize()
         sb.sleep(2)
         sb.solve_captcha()
-        # accountID = 'input[placeholder="Account ID"]'
-        # accountPW = 'input[placeholder="Password"]'
-        # sb.type(accountID, username)
-        # sb.type(accountPW, password)
-        # sb.click('button:contains(" Login ")')
-        # sb.sleep(2)
-        # sb.click('label:contains("TH")')
+        accountID = 'input[placeholder="Account ID"]'
+        accountPW = 'input[placeholder="Password"]'
+        sb.type(accountID, username)
+        sb.type(accountPW, password)
+        sb.click('button:contains(" Login ")')
+        sb.sleep(2)
+        sb.click('label:contains("TH")')
     except Exception as e:
         print(f"[TurboLogin] Login failed: {e}")
-    
+
+
 def turbo_manual_Task(job):
     if isinstance(job, dict) and isinstance(job.get('jobs'), list):
         jobs = job.get('jobs', [])
@@ -105,9 +106,13 @@ def turbo_manual_Task(job):
             "timeout_seconds": timeout_minutes * 60,
             "started_at": now,
         })
-    
+
     print(f"[TurboManualTask] All jobs in pending list: {pending_jobs}", flush=True)
-    print(f"[TurboManualTask] Added {len(pending_jobs)} job(s) to pending list with timeouts: {[item['timeout_seconds'] for item in pending_jobs]} seconds", flush=True)
+    print(
+        f"[TurboManualTask] Added {len(pending_jobs)} job(s) to pending list with timeouts: "
+        f"{[item['timeout_seconds'] for item in pending_jobs]} seconds",
+        flush=True,
+    )
     pause_other_jobs_until = 0
 
     while pending_jobs:
@@ -120,23 +125,42 @@ def turbo_manual_Task(job):
             )
             time.sleep(remaining_pause)
 
-        tables_result = turbo_get_tables()
-        if not isinstance(tables_result, tuple):
-            fail_message = str(tables_result)
-            for job_item in pending_jobs:
-                send_result(
-                    job_item["id"],
-                    "failed",
-                    job_item["region"],
-                    job_item["vehicleType"],
-                    fail_message,
-                )
-            return
+        elementsDest, elementsRegion, elementsVehicle, elementsSelect = turbo_get_tables(pending_jobs[0]["timeout_seconds"])
 
-        elementsDest, elementsRegion, elementsVehicle, elementsSelect = tables_result
+        if (
+            len(elementsDest) == 0
+            and len(elementsRegion) == 0
+            and len(elementsVehicle) == 0
+            and len(elementsSelect) == 0
+        ):
+            print(
+                "[TurboManualTask] Table fetch returned no data",
+                flush=True,
+            )
+            current_time = time.time()
+            timed_out_job_ids = set()
+            for job_item in pending_jobs:
+                elapsed_seconds = current_time - job_item["started_at"]
+                if elapsed_seconds >= job_item["timeout_seconds"]:
+                    send_result(
+                        job_item["id"],
+                        "failed",
+                        job_item["region"],
+                        job_item["vehicleType"],
+                        f"Table fetch returned no data after {job_item['timeout_seconds'] / 60} minutes timeout",
+                    )
+                    timed_out_job_ids.add(job_item["id"])
+
+            if timed_out_job_ids:
+                pending_jobs = [
+                    item for item in pending_jobs if item["id"] not in timed_out_job_ids
+                ]
+
+            if pending_jobs:
+                time.sleep(3)
+            continue
 
         matched_job_ids = set()
-
         clicked_job_id = None
 
         for i, elem in enumerate(elementsDest):
@@ -198,7 +222,6 @@ def turbo_manual_Task(job):
                     matched_job_ids.add(job_item["id"])
 
                     if clicked_job_id is not None:
-                        # Only allow one clicked task per loop so others are paused for 1 minute
                         break
 
             if clicked_job_id is not None:
@@ -244,120 +267,25 @@ def turbo_manual_Task(job):
             time.sleep(3)
 
 
-def turbo_manual_single_task(job):
-    """
-    Receive job data from the Electron UI (Management page).
-    Returns result by printing a JSON line to stdout (read by Electron).
-    """
-    global sb
-    jobID = job.get('id')
-    jobRegion = job.get('region')
-    jobVehicleType = job.get('vehicleType')
-    jobDestOne = job.get('startDestination')
-    jobDestTwo = job.get('secondDestination')
-    jobDestThree = job.get('thirdDestination')
-    jobTimeout = job.get('timeout', 10)  # Default timeout in minutes if not provided
-
-    try:
-        timeout_minutes = float(jobTimeout)
-    except (TypeError, ValueError):
-        timeout_minutes = 10
-    if timeout_minutes <= 0:
-        timeout_minutes = 10
-
-    if sb is None:
-        send_result(jobID, "failed", jobRegion, jobVehicleType, "Browser not initialized. Login first.")
-        return
-
-    try:
-        print(f"[TurboManualTask] Processing job #{jobID}: {jobRegion}, {jobVehicleType}, {jobDestOne}, {jobDestTwo}, {jobDestThree}", flush=True)
-        time.sleep(2)
-        match_found = False
-
-        # Set timeout for search rows
-        search_timeout = timeout_minutes * 60  # convert minutes to seconds
-        search_start_time = time.time()
-        
-        tables_result = turbo_get_tables()
-        if not isinstance(tables_result, tuple):
-            return tables_result
-        elementsDest, elementsRegion, elementsVehicle, elementsSelect = tables_result
-        
-        while not match_found and (time.time() - search_start_time) < search_timeout:
-            for i, elem in enumerate(elementsDest):
-                dest_text = elem.text.strip()
-                parts = dest_text.split('-') # Split '-' to get the first part as destination
-                destOneCus = parts[0] if len(parts) > 0 else '' # Get the first part as destination
-                destTwoCus = parts[1] if len(parts) > 1 else '' # Get the second part as destination
-                destThreeCus = parts[2] if len(parts) > 2 else '' # Get the third part as destination
-                region_text = elementsRegion[i].text.strip() if i < len(elementsRegion) else "N/A"
-                vehicle_text = elementsVehicle[i].text.strip() if i < len(elementsVehicle) else "N/A"
-                select_text = elementsSelect[i].text.strip() if i < len(elementsSelect) else "N/A"
-                print(f"Row {i}: Dest='{dest_text}', Region='{region_text}', Vehicle='{vehicle_text}', Select='{select_text}'", flush=True)
-                
-                if destOneCus == jobDestOne and destTwoCus == jobDestTwo and destThreeCus == jobDestThree:
-                    if vehicle_text == jobVehicleType:
-                        if region_text == jobRegion:
-                            print(f"--> Match found for job #{jobID} at row {i} with exact destination: {destOneCus}-{destTwoCus}-{destThreeCus} AND vehicle: {vehicle_text} AND region: {region_text}", flush=True)
-                            match_found = True
-                            sb.sleep(0.5)
-                            # Click the select button in this row
-                            if i < len(elementsSelect):
-                                try:
-                                    elementsSelect[i].mouse_click()
-                                    print(f"Clicked select for job #{jobID} at row {i}", flush=True)
-                                    sb.sleep(3)
-                                    sb.wait_for_element('button[data-v-50b69d50] span:contains("แข่งขันรับงาน")', timeout=15)
-                                    sb.sleep(5)
-                                    sb.mouse_click('button[data-v-50b69d50] span:contains("แข่งขันรับงาน")')
-                                    # sb.highlight_overlay('button[data-v-50b69d50] span:contains("แข่งขันรับงาน")')
-                                    #app > div > div.main-container > div.app-main > div > div:nth-child(4) > div > div.el-dialog__footer > div > button[data-v-50b69d50] span:contains("แข่งขันรับงาน")
-                                    # highlight this Xpath //*[@id="app"]/div/div[2]/div[2]/div/div[3]/div/div[3]/div/button/span
-                                    send_result(jobID, "completed", jobRegion, jobVehicleType, f"{dest_text}")
-                                    sb.sleep(2)
-                                except Exception as e:
-                                    print(f"Failed to click select for job #{jobID} at row {i}: {e}", flush=True)
-                                    send_result(jobID, "failed", jobRegion, jobVehicleType, f"{dest_text}")
-                            else:
-                                print(f"No select element for row {i} while processing job #{jobID}", flush=True)
-                            break
-            # If not found in this iteration, wait before refetching
-            if not match_found:
-                elapsed = time.time() - search_start_time
-                remaining = search_timeout - elapsed
-                if remaining > 0:
-                    print(f"No match found. Waiting 3 seconds before refetching... ({remaining:.1f}s remaining)", flush=True)
-                    time.sleep(3)
-                    
-        # After timeout
-        if not match_found:
-            print(f"✗ No match found after {search_timeout} seconds timeout", flush=True)
-            send_result(jobID, "failed", jobRegion, jobVehicleType, f"No match found after {search_timeout/60} minutes timeout")
-    except Exception as e:
-        send_result(jobID, "failed", jobRegion, jobVehicleType, str(e))
-
-def turbo_get_tables():
+def turbo_get_tables(time):
     global sb
     try:
-        elementsDest = sb.find_elements('td[class*="el-table_1_column_2"]', timeout=30)
-        elementsRegion = sb.find_elements('td[class*="el-table_1_column_4"]', timeout=30)
-        elementsVehicle = sb.find_elements('td[class*="el-table_1_column_5"]', timeout=30)
-        elementsSelect = sb.find_elements('td[class*="el-table_1_column_13"]', timeout=30) #'td[class*="el-table_1_column_13"] span'
+        elementsDest = sb.find_elements('td[class*="el-table_1_column_2"]', timeout=time)
+        elementsRegion = sb.find_elements('td[class*="el-table_1_column_4"]', timeout=time)
+        elementsVehicle = sb.find_elements('td[class*="el-table_1_column_5"]', timeout=time)
+        elementsSelect = sb.find_elements('td[class*="el-table_1_column_13"] span', timeout=time)
         return elementsDest, elementsRegion, elementsVehicle, elementsSelect
     except TimeoutException as e:
         fail_msg = f"FAIL: Timed out waiting for table columns: {e}"
         print(fail_msg, flush=True)
-        return fail_msg, 504
+        return [], [], [], []
     except Exception as e:
         fail_msg = f"FAIL: Error while fetching table columns: {e}"
         print(fail_msg, flush=True)
-        return fail_msg, 500
+        return [], [], [], []
+
 
 def send_result(job_id, status, region="", vehicle="", message=""):
-    """
-    Print a structured JSON result line to stdout.
-    Electron main process parses this to update the UI.
-    """
     result = json.dumps({
         "type": "task_result",
         "id": job_id,
@@ -367,13 +295,9 @@ def send_result(job_id, status, region="", vehicle="", message=""):
         "message": message,
     })
     print(result, flush=True)
-    
+
 
 def listen_for_commands():
-    """
-    Listen on stdin for JSON commands from the Electron main process.
-    Each line is a JSON object representing a job/task.
-    """
     print("[TurboBot] Listening for commands on stdin...", flush=True)
     for line in sys.stdin:
         line = line.strip()
@@ -398,18 +322,15 @@ if __name__ == "__main__":
     password = sys.argv[2]
     turbo_login(username, password)
 
-    # Start listening for manual task commands from Electron in a background thread
     cmd_thread = threading.Thread(target=listen_for_commands, daemon=True)
     cmd_thread.start()
 
-# Keep-alive: monitor browser window
 try:
     while True:
         time.sleep(2)
         try:
             if sb is None or sb.driver is None:
                 raise Exception("Browser reference lost")
-            # Check browser is still alive via its internal connection
             if hasattr(sb.driver, 'browser') and sb.driver.browser is None:
                 raise Exception("Browser connection lost")
         except Exception:
